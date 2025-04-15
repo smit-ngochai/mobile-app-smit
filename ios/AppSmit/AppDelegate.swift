@@ -5,6 +5,9 @@ import ReactAppDependencyProvider
 
 @main
 class AppDelegate: RCTAppDelegate {
+  // Thêm biến static để lưu trạng thái orientation
+  static var orientationLock = UIInterfaceOrientationMask.all
+  
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
     self.moduleName = "AppSmit"
     self.dependencyProvider = RCTAppDependencyProvider()
@@ -26,5 +29,10 @@ class AppDelegate: RCTAppDelegate {
 #else
     Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
+  }
+  
+  // Thêm phương thức này để kiểm soát orientation
+  override func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+    return AppDelegate.orientationLock
   }
 }
