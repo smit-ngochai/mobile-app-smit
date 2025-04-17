@@ -7,10 +7,10 @@ import { IconSetting } from "../assets"
 import api from "../globall/globall"
 
 function QRLoginScreen({ navigation }: { navigation: any }) {
-    const [showCamera, setShowCamera] = React.useState(true) // Ban đầu mở camera ngay lập tức
+    const [show_camera, setShowCamera] = React.useState(true) // Ban đầu mở camera ngay lập tức
     const [scanned_code, setScannedCode] = React.useState<string | null>(null)
-    const [deviceInfo, setDeviceInfo] = React.useState("") // Lưu thông tin thiết bị từ mã QR
-    const appState = React.useRef(AppState.currentState)
+    const [device_info, setDeviceInfo] = React.useState("") // Lưu thông tin thiết bị từ mã QR
+    const app_state = React.useRef(AppState.currentState)
 
     // Camera permissions
     const { hasPermission, requestPermission } = useCameraPermission()
@@ -31,11 +31,11 @@ function QRLoginScreen({ navigation }: { navigation: any }) {
     // Kiểm tra quyền camera khi ứng dụng trở lại từ nền
     React.useEffect(() => {
         const subscription = AppState.addEventListener("change", nextAppState => {
-            if (appState.current.match(/inactive|background/) && nextAppState === "active") {
+            if (app_state.current.match(/inactive|background/) && nextAppState === "active") {
                 // Ứng dụng vừa trở lại từ nền, kiểm tra quyền và khôi phục trạng thái
                 checkSavedStateAndPermission()
             }
-            appState.current = nextAppState
+            app_state.current = nextAppState
         })
 
         return () => {
@@ -45,8 +45,8 @@ function QRLoginScreen({ navigation }: { navigation: any }) {
 
     // Kiểm tra trạng thái đã lưu và quyền camera
     const checkSavedStateAndPermission = async () => {
-        const savedScreen = await AsyncStorage.getItem("lastScreen")
-        const savedCamera = await AsyncStorage.getItem("showCamera")
+        const saved_screen = await AsyncStorage.getItem("lastScreen")
+        const saved_camera = await AsyncStorage.getItem("showCamera")
 
         // Xóa dữ liệu đã lưu
         await AsyncStorage.multiRemove(["lastScreen", "showCamera"])
@@ -54,9 +54,9 @@ function QRLoginScreen({ navigation }: { navigation: any }) {
         // Kiểm tra quyền camera hiện tại
         const currentStatus = await Camera.getCameraPermissionStatus()
 
-        if (savedScreen === "QRLogin" && String(currentStatus) === "authorized") {
+        if (saved_screen === "QRLogin" && String(currentStatus) === "authorized") {
             // Nếu trước đó đang ở màn hình QRLogin và quyền đã được cấp
-            if (savedCamera === "true") {
+            if (saved_camera === "true") {
                 setShowCamera(true)
             }
         }
@@ -66,7 +66,7 @@ function QRLoginScreen({ navigation }: { navigation: any }) {
     const saveStateAndOpenSettings = async () => {
         try {
             await AsyncStorage.setItem("lastScreen", "QRLogin")
-            await AsyncStorage.setItem("showCamera", String(showCamera))
+            await AsyncStorage.setItem("showCamera", String(show_camera))
             Linking.openSettings()
         } catch (error) {
             console.error("Lỗi khi lưu trạng thái:", error)
@@ -116,7 +116,7 @@ function QRLoginScreen({ navigation }: { navigation: any }) {
     }
 
     // Hiển thị camera
-    if (showCamera) {
+    if (show_camera) {
         // Kiểm tra quyền camera
         if (!hasPermission) {
             return (
@@ -176,7 +176,7 @@ function QRLoginScreen({ navigation }: { navigation: any }) {
         <ImageBackground source={require("../assets/bgr2.png")} style={styles.container}>
             <Image source={require("../assets/login/image.png")} />
             <Text style={{ fontSize: 24, fontWeight: "700", textAlign: "center" }}>Cho phép đăng nhập</Text>
-            <Text style={{ textAlign: "center", marginTop: 15, color: "#718096", fontSize: 15, fontWeight: "500", lineHeight: 20 }}>Bạn đang chuẩn bị đăng nhập tài khoản trên thiết bị {deviceInfo || "Windown 11-dsdsda"}</Text>
+            <Text style={{ textAlign: "center", marginTop: 15, color: "#718096", fontSize: 15, fontWeight: "500", lineHeight: 20 }}>Bạn đang chuẩn bị đăng nhập tài khoản trên thiết bị {device_info || "Windown 11-dsdsda"}</Text>
 
             <TouchableOpacity
                 style={{ width: "100%" }}

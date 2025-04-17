@@ -1,5 +1,5 @@
 import * as React from "react"
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ImageBackground, ScrollView, Image, FlatList, Modal, TouchableWithoutFeedback, Pressable } from "react-native"
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ImageBackground, ScrollView, Image, FlatList, Modal, TouchableWithoutFeedback, Pressable, Alert } from "react-native"
 import LinearGradient from "react-native-linear-gradient"
 import { createStackNavigator } from "@react-navigation/stack"
 import { IconSearch, IconFolder, IconMoreVert, IconChevronLeft, IconFilter, IconMain, IconChevronRight, IconCloud, IconWatch, IconSend, IconDelete, IconVerify, IconCode } from "../assets"
@@ -16,30 +16,34 @@ type RootStackParamList = {
 
 // Tạo Context để quản lý trạng thái modal
 const ModalContext = React.createContext<{
-    modalFiller: boolean
+    modal_filler: boolean
     setModalFiller: React.Dispatch<React.SetStateAction<boolean>>
-    modalOptions: boolean
+    modal_options: boolean
     setModalOptions: React.Dispatch<React.SetStateAction<boolean>>
-    modalAddGroup: boolean
+    modal_add_group: boolean
     setModalAddGroup: React.Dispatch<React.SetStateAction<boolean>>
-    modalConnect: boolean
+    modal_connect: boolean
     setModalConnect: React.Dispatch<React.SetStateAction<boolean>>
+    group_data: Array<{ name: string; data: boolean }>
+    setGroupData: React.Dispatch<React.SetStateAction<Array<{ name: string; data: boolean }>>>
 }>({
-    modalFiller: false,
+    modal_filler: false,
     setModalFiller: () => {},
-    modalOptions: false,
+    modal_options: false,
     setModalOptions: () => {},
-    modalAddGroup: false,
+    modal_add_group: false,
     setModalAddGroup: () => {},
-    modalConnect: false,
-    setModalConnect: () => {}
+    modal_connect: false,
+    setModalConnect: () => {},
+    group_data: [],
+    setGroupData: () => {}
 })
 
 const Stack = createStackNavigator<RootStackParamList>()
 
 // Modal filler
 const DevicesModaFiller = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
-    const [selectedFilter, setSelectedFilter] = React.useState("all")
+    const [selected_filter, setSelectedFilter] = React.useState("all")
 
     return (
         <ModalCustom visible={visible} onClose={onClose} height={200}>
@@ -49,12 +53,12 @@ const DevicesModaFiller = ({ visible, onClose }: { visible: boolean; onClose: ()
                 <Text style={[{ fontWeight: "500", fontSize: 15 }]}>Bộ lọc hiển thị thông báo</Text>
             </View>
 
-            <Pressable onPress={() => setSelectedFilter("all")} style={[styles.button, styles.buttonSearch, { marginBottom: 10, borderRadius: 16 }, selectedFilter === "all" && { borderColor: "#1A8CFF" }]}>
-                <CustomRadio selected={selectedFilter === "all"} label="Toàn bộ thông báo" color="#1A8CFF" />
+            <Pressable onPress={() => setSelectedFilter("all")} style={[styles.button, styles.buttonSearch, { marginBottom: 10, borderRadius: 16 }, selected_filter === "all" && { borderColor: "#1A8CFF" }]}>
+                <CustomRadio selected={selected_filter === "all"} label="Toàn bộ thông báo" color="#1A8CFF" />
             </Pressable>
 
-            <Pressable onPress={() => setSelectedFilter("unread")} style={[styles.button, styles.buttonSearch, { marginBottom: 10, borderRadius: 16 }, selectedFilter === "unread" && { borderColor: "#1A8CFF" }]}>
-                <CustomRadio selected={selectedFilter === "unread"} label="Hiển thị thông báo chưa đọc" color="#1A8CFF" />
+            <Pressable onPress={() => setSelectedFilter("unread")} style={[styles.button, styles.buttonSearch, { marginBottom: 10, borderRadius: 16 }, selected_filter === "unread" && { borderColor: "#1A8CFF" }]}>
+                <CustomRadio selected={selected_filter === "unread"} label="Hiển thị thông báo chưa đọc" color="#1A8CFF" />
             </Pressable>
         </ModalCustom>
     )
@@ -85,7 +89,34 @@ const DevicesModalOptions = ({ visible, onClose }: { visible: boolean; onClose: 
 
 // Modal Tạo nhóm mới
 const DevicesModalAddGroup = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
-    const inputRefAddGroup = React.useRef<TextInput>(null)
+    const input_ref_add_group = React.useRef<TextInput>(null)
+    const [group_name_focused, setGroupNameFocused] = React.useState(false)
+    const [group_name, setGroupName] = React.useState("")
+    const { group_data, setGroupData } = React.useContext(ModalContext)
+
+    // Hàm thêm nhóm mới
+    const handleAddGroup = () => {
+        if (group_name.trim() === "") {
+            // Hiển thị thông báo lỗi nếu tên nhóm trống
+            Alert.alert("Nhập tên nhóm bạn muốn tạo")
+            return
+        }
+
+        // Thêm nhóm mới vào danh sách
+        const newGroup = { name: group_name, data: false }
+        setGroupData([...group_data, newGroup])
+
+        // Reset form và đóng modal
+        setGroupName("")
+        onClose()
+    }
+
+    // Reset form khi modal đóng
+    React.useEffect(() => {
+        if (!visible) {
+            setGroupName("")
+        }
+    }, [visible])
 
     return (
         <ModalCustom visible={visible} onClose={onClose} height={200} useKeyboardAvoidingView={true}>
@@ -94,13 +125,22 @@ const DevicesModalAddGroup = ({ visible, onClose }: { visible: boolean; onClose:
                 <Text style={[{ fontWeight: "500", fontSize: 15 }]}>Tạo nhóm mới</Text>
             </View>
             <Pressable
-                style={[styles.inputContainer, { borderWidth: 1, marginBottom: 20, height: 45 }]}
+                style={[
+                    styles.inputContainer,
+                    {
+                        borderWidth: 1,
+                        marginBottom: 20,
+                        height: 45,
+                        borderColor: group_name_focused ? "#1A8CFF" : "#CCE4FF"
+                    }
+                ]}
                 onPress={() => {
-                    inputRefAddGroup.current?.focus()
+                    input_ref_add_group.current?.focus()
+                    setGroupNameFocused(true)
                 }}>
-                <TextInput ref={inputRefAddGroup} style={styles.input} placeholder="Điền tên nhóm..." />
+                <TextInput ref={input_ref_add_group} style={styles.input} placeholder="Điền tên nhóm..." onFocus={() => setGroupNameFocused(true)} onBlur={() => setGroupNameFocused(false)} value={group_name} onChangeText={setGroupName} />
             </Pressable>
-            <TouchableOpacity activeOpacity={0.7}>
+            <TouchableOpacity activeOpacity={0.7} onPress={handleAddGroup}>
                 <LinearGradient colors={["#00C7DE", "#1A8CFF", "#0071F2"]} locations={[0, 0.549, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.linearGradient, { height: 40 }]}>
                     <Text style={[styles.buttonText, { borderRadius: 10 }]}>Xác nhận</Text>
                 </LinearGradient>
@@ -111,7 +151,8 @@ const DevicesModalAddGroup = ({ visible, onClose }: { visible: boolean; onClose:
 
 // Modal Điền mã liên kết
 const DevicesModalConnect = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
-    const inputRef = React.useRef<TextInput>(null)
+    const input_ref = React.useRef<TextInput>(null)
+    const [code_focused, setCodeFocused] = React.useState(false)
 
     return (
         <ModalCustom visible={visible} onClose={onClose} height={200} useKeyboardAvoidingView={true}>
@@ -120,11 +161,12 @@ const DevicesModalConnect = ({ visible, onClose }: { visible: boolean; onClose: 
                 <Text style={[{ fontWeight: "500", fontSize: 15 }]}>Nhập mã nhận cấu hình</Text>
             </View>
             <Pressable
-                style={[styles.inputContainer, { borderWidth: 1, marginBottom: 20, height: 45 }]}
+                style={[styles.inputContainer, { borderWidth: 1, marginBottom: 20, height: 45, borderColor: code_focused ? "#1A8CFF" : "#CCE4FF" }]}
                 onPress={() => {
-                    inputRef.current?.focus()
+                    input_ref.current?.focus()
+                    setCodeFocused(true)
                 }}>
-                <TextInput ref={inputRef} style={styles.input} placeholder="Điền mã tại đây..." />
+                <TextInput ref={input_ref} style={styles.input} placeholder="Điền mã tại đây..." onFocus={() => setCodeFocused(true)} onBlur={() => setCodeFocused(false)} />
             </Pressable>
             <TouchableOpacity activeOpacity={0.7}>
                 <LinearGradient colors={["#00C7DE", "#1A8CFF", "#0071F2"]} locations={[0, 0.549, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.linearGradient, { height: 40 }]}>
@@ -139,10 +181,12 @@ const DevicesModalConnect = ({ visible, onClose }: { visible: boolean; onClose: 
 const ConnectionDetailScreen = ({ route }: { route: any }) => {
     const navigation = useNavigation()
     const { title, count, lastUpdate, icon } = route.params || {}
-    const { modalFiller, setModalFiller } = React.useContext(ModalContext)
-    const { modalOptions, setModalOptions } = React.useContext(ModalContext)
+    const { modal_filler, setModalFiller } = React.useContext(ModalContext)
+    const { modal_options, setModalOptions } = React.useContext(ModalContext)
+    const [search_focused, setSearchFocused] = React.useState(false)
+    const search_name_id = React.useRef<TextInput>(null)
 
-    const notificationData = [
+    const [notification_data] = React.useState([
         {
             id: "1",
             message: "Tk Facebook Anna Zahna - 123456789 đã bị mất kết nối nâng cao",
@@ -198,7 +242,35 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
             message: "Tk Facebook Lisa Taylor - 159753468 đã bị mất kết nối nâng cao",
             time: "10:15"
         }
-    ]
+    ])
+
+    // Thêm state tìm kiếm - khởi tạo với dữ liệu gốc
+    const [search_text, setSearchText] = React.useState("")
+
+    // Tính toán danh sách đã lọc trực tiếp từ searchText và notificationData
+    const filtered_notifications = React.useMemo(() => {
+        if (!search_text.trim()) {
+            return notification_data
+        }
+
+        const search_lower = search_text.toLowerCase()
+
+        return notification_data.filter(item => {
+            // Tìm trong message
+            const message_matches = item.message.toLowerCase().includes(search_lower)
+
+            // Tìm trong ID - đảm bảo chuyển thành string
+            const id_string = String(item.id) // Chắc chắn chuyển đổi thành string
+            const id_matches = id_string.includes(search_lower)
+
+            return message_matches || id_matches
+        })
+    }, [notification_data, search_text])
+
+    // Hàm xử lý tìm kiếm
+    const handleSearch = (text: string) => {
+        setSearchText(text)
+    }
 
     // Hàm render item cho FlatList
     const renderItem = ({ item, index }: { item: any; index: number }) => (
@@ -212,7 +284,7 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
                     <Text style={styles.notificationTime}>{item.time}</Text>
                 </View>
             </View>
-            {index < notificationData.length - 1 && <View style={styles.dashedBorder} />}
+            {index < filtered_notifications.length - 1 && <View style={styles.dashedBorder} />}
         </View>
     )
 
@@ -226,9 +298,21 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
             </View>
 
             <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
-                <TouchableOpacity style={[styles.inputContainer, { flex: 1 }]} activeOpacity={0.8} onPress={() => {}}>
-                    <IconSearch width={20} height={20} />
-                    <TextInput style={styles.input} placeholder="Tìm kiếm tên hoặc ID .." />
+                <TouchableOpacity
+                    style={[
+                        styles.inputContainer,
+                        {
+                            flex: 1,
+                            borderColor: search_focused ? "#1A8CFF" : "#DCE3EA"
+                        }
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                        search_name_id.current?.focus()
+                        setSearchFocused(true)
+                    }}>
+                    <IconSearch width={20} height={20} focused={search_focused} />
+                    <TextInput ref={search_name_id} style={styles.input} placeholder="Tìm kiếm tên hoặc ID .." onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} value={search_text} onChangeText={handleSearch} />
                 </TouchableOpacity>
                 <TouchableOpacity
                     onPress={() => {
@@ -249,11 +333,23 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
             </View>
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 16 }}>
-                <Text style={{ fontSize: 14, fontWeight: "600" }}>Tổng cộng {notificationData.length}</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600" }}>Tổng cộng {filtered_notifications.length}</Text>
                 <Text style={{ width: 5.5, height: 5.5, borderRadius: 50, backgroundColor: "#A0AEC0" }}></Text>
                 <GradientText text="230 mới" style={{ fontSize: 14, fontWeight: "600", marginTop: 2 }} colors={["#00C7DE", "#1A8CFF", "#0071F2"]} locations={[0, 0.549, 1]} start={{ x: 0, y: 0 }} end={{ x: 0.5, y: 1 }} />
             </View>
-            <FlatList data={notificationData} renderItem={renderItem} style={{ marginBottom: 12 }} showsVerticalScrollIndicator={false} />
+
+            <FlatList
+                data={filtered_notifications}
+                renderItem={renderItem}
+                style={{ marginBottom: 12 }}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={() => (
+                    <View style={{ alignItems: "center", padding: 20 }}>
+                        <Text style={{ fontSize: 16, color: "#718096" }}>Không tìm thấy thông báo phù hợp</Text>
+                    </View>
+                )}
+                keyExtractor={item => item.id}
+            />
         </ImageBackground>
     )
 }
@@ -261,13 +357,15 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
 // Component cho màn hình chi tiết nhóm
 const GroupDetailScreen = ({ route }: { route: any }) => {
     const navigation = useNavigation<NavigationProp<RootStackParamList>>()
-    const groupName = route.params?.groupName || "No group name provided"
-    const hasData = route.params?.hasData || false
-    const { modalFiller, setModalFiller } = React.useContext(ModalContext)
-    const { modalConnect, setModalConnect } = React.useContext(ModalContext)
+    const group_name = route.params?.groupName || "No group name provided"
+    const has_data = route.params?.hasData || false
+    const { modal_filler, setModalFiller } = React.useContext(ModalContext)
+    const { modal_connect, setModalConnect } = React.useContext(ModalContext)
+    const [search_focused, setSearchFocused] = React.useState(false)
+    const search_name_id = React.useRef<TextInput>(null)
 
     // Dữ liệu kết nối
-    const connectData = [
+    const connect_data = [
         {
             id: 1,
             title: "Mất kết nối nâng cao",
@@ -314,15 +412,20 @@ const GroupDetailScreen = ({ route }: { route: any }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <IconChevronLeft width={26} height={26} />
                 </TouchableOpacity>
-                <Text style={{ fontSize: 20, fontWeight: "600", marginLeft: 5 }}>{hasData ? groupName : "Nhóm"}</Text>
+                <Text style={{ fontSize: 20, fontWeight: "600", marginLeft: 5 }}>{has_data ? group_name : "Nhóm"}</Text>
             </View>
 
-            {hasData ? (
+            {has_data ? (
                 <>
                     <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
-                        <TouchableOpacity style={[styles.inputContainer, { flex: 1 }]} activeOpacity={0.8} onPress={() => {}}>
-                            <IconSearch width={20} height={20} />
-                            <TextInput style={styles.input} placeholder="Tìm kiếm thông báo.." />
+                        <TouchableOpacity
+                            style={[styles.inputContainer, { flex: 1 }]}
+                            activeOpacity={0.8}
+                            onPress={() => {
+                                setSearchFocused(true)
+                            }}>
+                            <IconSearch width={20} height={20} focused={search_focused} />
+                            <TextInput ref={search_name_id} style={styles.input} placeholder="Tìm kiếm thông báo.." onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} />
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => {
@@ -337,10 +440,10 @@ const GroupDetailScreen = ({ route }: { route: any }) => {
                     <Text style={{ fontSize: 20, fontWeight: "600", marginTop: 25 }}>Kết nối & đồng bộ tài sản</Text>
 
                     <ScrollView style={{ marginTop: 15, marginBottom: 10, marginRight: -10, paddingRight: 10, paddingTop: 5 }}>
-                        {connectData.map((item, index) => (
+                        {connect_data.map((item, index) => (
                             <TouchableOpacity
                                 key={item.id}
-                                style={[styles.item_connect, index < connectData.length - 1 && { marginBottom: 10 }]}
+                                style={[styles.item_connect, index < connect_data.length - 1 && { marginBottom: 10 }]}
                                 onPress={() =>
                                     navigation.navigate("ConnectionDetail", {
                                         title: item.title,
@@ -392,26 +495,53 @@ const GroupDetailScreen = ({ route }: { route: any }) => {
 // Component cho màn hình danh sách nhóm
 const NotifyListScreen = () => {
     const navigation = useNavigation<NavigationProp<RootStackParamList>>()
-    const usernameInputRef = React.useRef<TextInput>(null)
-    const { modalAddGroup, setModalAddGroup } = React.useContext(ModalContext)
-    const groupData = [
-        { name: "Nhóm nhận thông báo A", data: true },
-        { name: "Nhóm nhận thông báo B", data: false },
-        { name: "Nhóm nhận thông báo C", data: true }
-    ]
+    const username_input_ref = React.useRef<TextInput>(null)
+    const { modal_add_group, setModalAddGroup, group_data, setGroupData } = React.useContext(ModalContext)
+
+    const [search_focused, setSearchFocused] = React.useState(false)
+
+    const [search_text, setSearchText] = React.useState("")
+    const [filtered_group_data, setFilteredGroupData] = React.useState(group_data)
+
+    // Cập nhật filteredGroupData khi groupData thay đổi
+    React.useEffect(() => {
+        if (search_text.trim() === "") {
+            setFilteredGroupData(group_data)
+        } else {
+            const filtered = group_data.filter(group => group.name.toLowerCase().includes(search_text.toLowerCase()))
+            setFilteredGroupData(filtered)
+        }
+    }, [group_data, search_text])
+
+    const handleSearch = (text: string) => {
+        setSearchText(text)
+        if (text.trim() === "") {
+            setFilteredGroupData(group_data)
+        } else {
+            const filtered = group_data.filter(group => group.name.toLowerCase().includes(text.toLowerCase()))
+            setFilteredGroupData(filtered)
+        }
+    }
 
     return (
         <ImageBackground source={require("../assets/bgr2.png")} style={styles.container}>
             <Text style={{ fontSize: 20, fontWeight: "600" }}>Danh sách nhóm</Text>
             <View style={{ flexDirection: "row", gap: 13, marginTop: 20 }}>
                 <TouchableOpacity
-                    style={[styles.inputContainer, { flex: 1 }]}
+                    style={[
+                        styles.inputContainer,
+                        {
+                            flex: 1,
+                            borderColor: search_focused ? "#1A8CFF" : "#DCE3EA"
+                        }
+                    ]}
                     activeOpacity={0.8}
                     onPress={() => {
-                        usernameInputRef.current?.focus()
+                        username_input_ref.current?.focus()
+                        setSearchFocused(true)
                     }}>
-                    <IconSearch width={20} height={20} />
-                    <TextInput ref={usernameInputRef} style={styles.input} placeholder="Tài khoản..." />
+                    <IconSearch focused={search_focused} />
+                    <TextInput ref={username_input_ref} style={styles.input} placeholder="Tìm kiếm nhóm..." onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} value={search_text} onChangeText={handleSearch} />
                 </TouchableOpacity>
                 <TouchableOpacity
                     activeOpacity={0.7}
@@ -424,15 +554,21 @@ const NotifyListScreen = () => {
                 </TouchableOpacity>
             </View>
             <ScrollView style={{ marginTop: 23, marginBottom: 10 }}>
-                {groupData.map((group, index) => (
-                    <TouchableOpacity key={index} style={[styles.item_folder, index < groupData.length - 1 && { marginBottom: 15 }]} onPress={() => navigation.navigate("GroupDetail", { groupName: group.name, hasData: group.data })}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 15 }}>
-                            <IconFolder width={24} height={24} />
-                            <Text style={{ fontSize: 15, fontWeight: "700" }}>{group.name}</Text>
-                        </View>
-                        <IconMoreVert width={24} height={24} />
-                    </TouchableOpacity>
-                ))}
+                {filtered_group_data.length > 0 ? (
+                    filtered_group_data.map((group, index) => (
+                        <TouchableOpacity key={index} style={[styles.item_folder, index < filtered_group_data.length - 1 && { marginBottom: 15 }]} onPress={() => navigation.navigate("GroupDetail", { groupName: group.name, hasData: group.data })}>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 15 }}>
+                                <IconFolder width={24} height={24} />
+                                <Text style={{ fontSize: 15, fontWeight: "700" }}>{group.name}</Text>
+                            </View>
+                            <IconMoreVert width={24} height={24} />
+                        </TouchableOpacity>
+                    ))
+                ) : (
+                    <View style={{ flex: 1, alignItems: "center", marginTop: 50 }}>
+                        <Text style={{ fontSize: 16, color: "#718096" }}>Không tìm thấy nhóm nào</Text>
+                    </View>
+                )}
             </ScrollView>
         </ImageBackground>
     )
@@ -441,24 +577,42 @@ const NotifyListScreen = () => {
 // Component chính sử dụng Stack Navigator
 function NotifyScreen() {
     // Khai báo state ở đây để chia sẻ giữa các màn hình
-    const [modalFiller, setModalFiller] = React.useState(false)
-    const [modalOptions, setModalOptions] = React.useState(false)
-    const [modalAddGroup, setModalAddGroup] = React.useState(false)
-    const [modalConnect, setModalConnect] = React.useState(false)
+    const [modal_filler, setModalFiller] = React.useState(false)
+    const [modal_options, setModalOptions] = React.useState(false)
+    const [modal_add_group, setModalAddGroup] = React.useState(false)
+    const [modal_connect, setModalConnect] = React.useState(false)
+
+    // Thêm state groupData
+    const [group_data, setGroupData] = React.useState([
+        { name: "Nhóm nhận thông báo A", data: true },
+        { name: "Nhóm nhận thông báo B", data: false },
+        { name: "Nhóm nhận thông báo C", data: true }
+    ])
 
     return (
-        <ModalContext.Provider value={{ modalFiller, setModalFiller, modalOptions, setModalOptions, modalAddGroup, setModalAddGroup, modalConnect, setModalConnect }}>
+        <ModalContext.Provider
+            value={{
+                modal_filler,
+                setModalFiller,
+                modal_options,
+                setModalOptions,
+                modal_add_group,
+                setModalAddGroup,
+                modal_connect,
+                setModalConnect,
+                group_data,
+                setGroupData
+            }}>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="NotifyList" component={NotifyListScreen} />
                 <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
                 <Stack.Screen name="ConnectionDetail" component={ConnectionDetailScreen} />
             </Stack.Navigator>
-
             {/* Modal được render ở đây để có thể hiển thị trên tất cả các màn hình */}
-            <DevicesModaFiller visible={modalFiller} onClose={() => setModalFiller(false)} />
-            <DevicesModalOptions visible={modalOptions} onClose={() => setModalOptions(false)} />
-            <DevicesModalAddGroup visible={modalAddGroup} onClose={() => setModalAddGroup(false)} />
-            <DevicesModalConnect visible={modalConnect} onClose={() => setModalConnect(false)} />
+            <DevicesModaFiller visible={modal_filler} onClose={() => setModalFiller(false)} />
+            <DevicesModalOptions visible={modal_options} onClose={() => setModalOptions(false)} />
+            <DevicesModalAddGroup visible={modal_add_group} onClose={() => setModalAddGroup(false)} />
+            <DevicesModalConnect visible={modal_connect} onClose={() => setModalConnect(false)} />
         </ModalContext.Provider>
     )
 }

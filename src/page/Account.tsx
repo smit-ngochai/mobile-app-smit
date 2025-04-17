@@ -89,6 +89,7 @@ const DevicesModal = ({ visible, onClose, onDeviceDataChanged }: { visible: bool
     // Thêm state mới để kiểm soát hiển thị modal thiết bị
     const [hide_device_modal, setHideDeviceModal] = React.useState(false)
     const [device_data, setDeviceData] = React.useState<any[]>([])
+    const [search_focused, setSearchFocused] = React.useState(false)
 
     // Hàm mở modal đăng xuất và ẩn modal thiết bị
     const openLogoutModal = (device: DeviceType | null = null) => {
@@ -145,6 +146,9 @@ const DevicesModal = ({ visible, onClose, onDeviceDataChanged }: { visible: bool
                 if (onDeviceDataChanged) {
                     onDeviceDataChanged()
                 }
+            } else {
+                // Reset trạng thái focus khi modal đóng
+                setSearchFocused(false)
             }
         }
 
@@ -164,10 +168,17 @@ const DevicesModal = ({ visible, onClose, onDeviceDataChanged }: { visible: bool
                 <Pressable
                     onPress={() => {
                         search_name_id.current?.focus()
+                        setSearchFocused(true)
                     }}
-                    style={[styles.button, styles.buttonSearch]}>
-                    <IconSearch />
-                    <TextInput ref={search_name_id} style={{ flex: 1, fontSize: 15, fontWeight: "500", height: 44 }} placeholder="Tìm kiếm tên hoặc ID .." />
+                    style={[
+                        styles.button,
+                        styles.buttonSearch,
+                        {
+                            borderColor: search_focused ? "#1A8CFF" : "#CCE4FF"
+                        }
+                    ]}>
+                    <IconSearch focused={search_focused} />
+                    <TextInput ref={search_name_id} style={{ flex: 1, fontSize: 15, fontWeight: "500", height: 44 }} placeholder="Tìm kiếm tên hoặc ID .." onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} />
                 </Pressable>
 
                 <View style={[styles.modal_list_device]}>
@@ -207,6 +218,7 @@ const DevicesModalMK = ({ visible, onClose }: { visible: boolean; onClose: () =>
     const confirm_mk_new = React.useRef<TextInput>(null)
     const handle_close_ref = React.useRef<(() => void) | null>(null)
     const two_fa_input_ref = React.useRef<TextInput>(null)
+    const [focused_input, setFocusedInput] = React.useState<string | null>(null)
 
     const [old_password, setOldPassword] = React.useState("")
     const [new_password, setNewPassword] = React.useState("")
@@ -216,9 +228,6 @@ const DevicesModalMK = ({ visible, onClose }: { visible: boolean; onClose: () =>
     // Thêm state để kiểm soát hiển thị modal xác nhận
     const [modal_confirm_visible, setModalConfirmVisible] = React.useState(false)
     const [hide_main_modal, setHideMainModal] = React.useState(false)
-
-    // Thêm state để theo dõi trạng thái xác thực hai yếu tố
-    // const [isTwoFactor, setIsTwoFactor] = React.useState(false)
 
     // Reset tất cả state khi modal đóng
     React.useEffect(() => {
@@ -239,11 +248,10 @@ const DevicesModalMK = ({ visible, onClose }: { visible: boolean; onClose: () =>
     const closeConfirmModal = () => {
         setModalConfirmVisible(false)
         setHideMainModal(false)
+        setFocusedInput(null)
     }
 
     const changePassword = async () => {
-        openConfirmModal()
-        return
         // Kiểm tra mật khẩu mới và xác nhận mật khẩu
         if (new_password !== confirm_password) {
             Alert.alert("Lỗi", "Mật khẩu mới và xác nhận mật khẩu không khớp")
@@ -300,12 +308,22 @@ const DevicesModalMK = ({ visible, onClose }: { visible: boolean; onClose: () =>
                     onPress={() => {
                         mk_old.current?.focus()
                     }}
-                    style={[styles.button, styles.buttonSearch, { paddingHorizontal: 12, gap: 12 }]}>
-                    <IconKey />
+                    style={[
+                        styles.button,
+                        styles.buttonSearch,
+                        {
+                            paddingHorizontal: 12,
+                            gap: 12,
+                            borderColor: focused_input === "old_password" ? "#1A8CFF" : "#CCE4FF"
+                        }
+                    ]}>
+                    <IconKey focused={focused_input === "old_password"} />
                     <TextInput
                         ref={mk_old}
                         value={old_password}
                         onChangeText={setOldPassword}
+                        onFocus={() => setFocusedInput("old_password")}
+                        onBlur={() => setFocusedInput(null)}
                         style={{
                             fontSize: 15,
                             fontWeight: "500",
@@ -320,17 +338,35 @@ const DevicesModalMK = ({ visible, onClose }: { visible: boolean; onClose: () =>
                     onPress={() => {
                         mk_new.current?.focus()
                     }}
-                    style={[styles.button, styles.buttonSearch, { marginTop: 12, gap: 12, paddingHorizontal: 12 }]}>
-                    <IconKey />
-                    <TextInput ref={mk_new} value={new_password} onChangeText={setNewPassword} style={{ flex: 1, fontSize: 15, fontWeight: "500", height: 44 }} placeholder="Mật khẩu mới..." secureTextEntry={true} />
+                    style={[
+                        styles.button,
+                        styles.buttonSearch,
+                        {
+                            marginTop: 12,
+                            gap: 12,
+                            paddingHorizontal: 12,
+                            borderColor: focused_input === "new_password" ? "#1A8CFF" : "#CCE4FF"
+                        }
+                    ]}>
+                    <IconKey focused={focused_input === "new_password"} />
+                    <TextInput ref={mk_new} value={new_password} onChangeText={setNewPassword} onFocus={() => setFocusedInput("new_password")} onBlur={() => setFocusedInput(null)} style={{ flex: 1, fontSize: 15, fontWeight: "500", height: 44 }} placeholder="Mật khẩu mới..." secureTextEntry={true} />
                 </Pressable>
                 <Pressable
                     onPress={() => {
                         confirm_mk_new.current?.focus()
                     }}
-                    style={[styles.button, styles.buttonSearch, { marginTop: 12, gap: 12, paddingHorizontal: 12 }]}>
-                    <IconKey />
-                    <TextInput ref={confirm_mk_new} value={confirm_password} onChangeText={setConfirmPassword} style={{ flex: 1, fontSize: 15, fontWeight: "500", height: 44 }} placeholder="Xác nhận mật khẩu mới.." secureTextEntry={true} />
+                    style={[
+                        styles.button,
+                        styles.buttonSearch,
+                        {
+                            marginTop: 12,
+                            gap: 12,
+                            paddingHorizontal: 12,
+                            borderColor: focused_input === "confirm_password" ? "#1A8CFF" : "#CCE4FF"
+                        }
+                    ]}>
+                    <IconKey focused={focused_input === "confirm_password"} />
+                    <TextInput ref={confirm_mk_new} value={confirm_password} onChangeText={setConfirmPassword} onFocus={() => setFocusedInput("confirm_password")} onBlur={() => setFocusedInput(null)} style={{ flex: 1, fontSize: 15, fontWeight: "500", height: 44 }} placeholder="Xác nhận mật khẩu mới.." secureTextEntry={true} />
                 </Pressable>
                 <TouchableOpacity style={{ marginTop: 25 }} activeOpacity={0.7} onPress={() => changePassword()}>
                     <LinearGradient colors={["#00C7DE", "#1A8CFF", "#0071F2"]} locations={[0, 0.549, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 12, height: 40, justifyContent: "center", alignItems: "center" }}>
@@ -348,10 +384,20 @@ const DevicesModalMK = ({ visible, onClose }: { visible: boolean; onClose: () =>
                     <Pressable
                         onPress={() => {
                             two_fa_input_ref.current?.focus()
+                            setFocusedInput("two_fa")
                         }}
-                        style={[styles.button, styles.buttonSearch, { marginTop: 20, gap: 12, paddingHorizontal: 12 }]}>
-                        <IconKey />
-                        <TextInput ref={two_fa_input_ref} value={input_2fa} onChangeText={setInput_2fa} style={{ flex: 1, fontSize: 15, fontWeight: "500", height: 44 }} placeholder="Nhập 2FA..." secureTextEntry={true} />
+                        style={[
+                            styles.button,
+                            styles.buttonSearch,
+                            {
+                                marginTop: 20,
+                                gap: 12,
+                                paddingHorizontal: 12,
+                                borderColor: focused_input === "two_fa" ? "#1A8CFF" : "#CCE4FF"
+                            }
+                        ]}>
+                        <IconKey focused={focused_input === "two_fa"} />
+                        <TextInput ref={two_fa_input_ref} value={input_2fa} onChangeText={setInput_2fa} onFocus={() => setFocusedInput("two_fa")} onBlur={() => setFocusedInput(null)} style={{ flex: 1, fontSize: 15, fontWeight: "500", height: 44 }} placeholder="Nhập 2FA..." secureTextEntry={true} />
                     </Pressable>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 30 }}>
                         <TouchableOpacity style={[styles.button, { flex: 1 }]} activeOpacity={0.7} onPress={closeConfirmModal}>
@@ -522,10 +568,13 @@ function AccountScreen() {
             method: "DELETE"
         })
         if (res.error) return Alert.alert(res.message || "Đăng xuất thất bại")
-        navigation.reset({
-            index: 0,
-            routes: [{ name: "auth" }]
-        })
+        await setLogoutModalVisible(false)
+        setTimeout(() => {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: "auth" }]
+            })
+        }, 50)
     }
 
     return (
@@ -575,16 +624,9 @@ function AccountScreen() {
                     <IconChevronRight width={26} height={26} />
                 </Pressable>
 
-                <Pressable
-                    style={[styles.container_item, { marginTop: 15 }]}
-                    onPress={() => {
-                        setLogoutModalVisible(true)
-                    }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 5 }}>
-                        <IconMonitor />
-                        <Text style={{ color: "#ED1723", fontSize: 15, fontWeight: "600" }}>Đăng xuất</Text>
-                    </View>
-                </Pressable>
+                <View onTouchEnd={() => setLogoutModalVisible(true)} style={[styles.container_item, styles.btn_logout]}>
+                    <Text style={{ color: "#ED1723", fontSize: 16, fontWeight: "600" }}>Đăng xuất</Text>
+                </View>
             </View>
         </ImageBackground>
     )
@@ -702,5 +744,16 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         marginRight: 7
+    },
+    btn_logout: {
+        marginTop: 15,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+        justifyContent: "center",
+        backgroundColor: "#FDECED",
+        borderRadius: 12,
+        borderWidth: 0,
+        borderColor: "#CCE4FF"
     }
 })

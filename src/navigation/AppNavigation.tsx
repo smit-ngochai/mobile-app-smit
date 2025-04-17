@@ -2,7 +2,7 @@ import { NavigationContainer, DefaultTheme, Theme } from "@react-navigation/nati
 import { createStackNavigator } from "@react-navigation/stack"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import "react-native-gesture-handler"
-import { StyleSheet } from "react-native"
+import { StyleSheet, View, Text, ActivityIndicator, ImageBackground } from "react-native"
 import LoginScreen from "../page/Login"
 import GateScreen from "../page/Gate"
 import RegisterScreen from "../page/Register"
@@ -164,8 +164,18 @@ export const AppNavigation = () => {
     }, [isApiLoaded, apiData])
 
     // Hiển thị loading khi đang đợi API
+    // if (isLoading) {
+    //     return null // hoặc hiển thị một loading indicator
+    // }
+
     if (isLoading) {
-        return null // hoặc hiển thị một loading indicator
+        return (
+            <>
+                <ImageBackground source={require("../assets/bgr2.png")} style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                    <ActivityIndicator size="large" color="#0000ff" />
+                </ImageBackground>
+            </>
+        )
     }
 
     // Render navigation sau khi đã có dữ liệu API
