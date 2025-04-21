@@ -1,6 +1,15 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "com.google.gms.google-services" 
+
+// Thêm plugin Google services
+// plugins {
+//   id 'com.android.application'
+  
+//   // Thêm Google services Gradle plugin
+//   id 'com.google.gms.google-services'
+// }
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -111,6 +120,16 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation project(':react-native-splash-screen')
+    
+    // Import Firebase BoM
+    implementation platform('com.google.firebase:firebase-bom:33.12.0')
+    
+    // Thêm thư viện Firebase Analytics (không cần chỉ định phiên bản)
+    implementation 'com.google.firebase:firebase-analytics'
+    
+    // Thêm các thư viện Firebase khác nếu cần
+    // implementation 'com.google.firebase:firebase-messaging'
+    // implementation 'com.google.firebase:firebase-auth'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
