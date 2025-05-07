@@ -12,7 +12,9 @@
         "dev:clean": "watchman watch-del-all && rm -rf node_modules/.cache && npx react-native start --reset-cache"
     },
     "dependencies": {
+        "@notifee/react-native": "^9.1.8",
         "@react-native-async-storage/async-storage": "^2.1.2",
+        "@react-native-community/push-notification-ios": "^1.11.0",
         "@react-native-firebase/app": "^21.14.0",
         "@react-native-firebase/messaging": "^21.14.0",
         "@react-native-masked-view/masked-view": "^0.3.2",
@@ -25,6 +27,7 @@
         "expo-linear-gradient": "~14.0.2",
         "react": "19.0.0",
         "react-native": "^0.78.1",
+        "react-native-app-badge": "^0.1.5",
         "react-native-gesture-handler": "^2.24.0",
         "react-native-linear-gradient": "^2.8.3",
         "react-native-orientation-locker": "^1.7.0",

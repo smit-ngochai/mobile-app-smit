@@ -7,6 +7,7 @@ import { useNavigation, NavigationProp } from "@react-navigation/native"
 import GradientText from "../components/GradientText"
 import CustomRadio from "../components/CustomRadio"
 import ModalCustom from "../components/ModalCustom"
+import { useNotification } from "../components/NotificationProvider"
 
 type RootStackParamList = {
     NotifyList: undefined
@@ -497,11 +498,10 @@ const NotifyListScreen = () => {
     const navigation = useNavigation<NavigationProp<RootStackParamList>>()
     const username_input_ref = React.useRef<TextInput>(null)
     const { modal_add_group, setModalAddGroup, group_data, setGroupData } = React.useContext(ModalContext)
-
     const [search_focused, setSearchFocused] = React.useState(false)
-
     const [search_text, setSearchText] = React.useState("")
     const [filtered_group_data, setFilteredGroupData] = React.useState(group_data)
+    const { resetBadge } = useNotification() // Sử dụng hook trực tiếp
 
     // Cập nhật filteredGroupData khi groupData thay đổi
     React.useEffect(() => {
@@ -521,6 +521,10 @@ const NotifyListScreen = () => {
             const filtered = group_data.filter(group => group.name.toLowerCase().includes(text.toLowerCase()))
             setFilteredGroupData(filtered)
         }
+    }
+    // Hàm xử lý khi nhấn nút tắt thông báo
+    const handleResetBadge = async () => {
+        await resetBadge()
     }
 
     return (
@@ -552,6 +556,9 @@ const NotifyListScreen = () => {
                         <Text style={[styles.buttonText, { paddingHorizontal: 10 }]}>Tạo group</Text>
                     </LinearGradient>
                 </TouchableOpacity>
+                <Pressable onPress={handleResetBadge}>
+                    <Text style={[{ fontWeight: "500", fontSize: 15, color: "#ED1723" }]}>Tắt thông báo</Text>
+                </Pressable>
             </View>
             <ScrollView style={{ marginTop: 23, marginBottom: 10 }}>
                 {filtered_group_data.length > 0 ? (

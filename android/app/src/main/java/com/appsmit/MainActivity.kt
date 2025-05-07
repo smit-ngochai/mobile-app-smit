@@ -1,4 +1,4 @@
-package com.appsmit
+package com.awesomeproject
 import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -17,6 +17,8 @@ class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     SplashScreen.show(this)  // Thêm dòng này để hiển thị splash screen
     super.onCreate(savedInstanceState)
+
+    
   }
   
   /**

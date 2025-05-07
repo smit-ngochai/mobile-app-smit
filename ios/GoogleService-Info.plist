@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyCbOeBzKwmqSH2XoVN1NnyEXZ73v0BX7dA</string>
+	<string>AIzaSyD5ZJZ0HomO_yGFW9U2BUgnSN2Xwo-zEWY</string>
 	<key>GCM_SENDER_ID</key>
-	<string>193267501703</string>
+	<string>849370445642</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.appsmit</string>
+	<string>com.smitgate</string>
 	<key>PROJECT_ID</key>
-	<string>notification-683eb</string>
+	<string>pushnotification-5885c</string>
 	<key>STORAGE_BUCKET</key>
-	<string>notification-683eb.firebasestorage.app</string>
+	<string>pushnotification-5885c.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:193267501703:ios:aadff399a7f349dcd28622</string>
+	<string>1:849370445642:ios:f288f08eb56e8fcb7d33b3</string>
 </dict>
 </plist>
