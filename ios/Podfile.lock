@@ -1368,6 +1368,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - react-native-spinkit (1.4.1):
+    - React
   - react-native-splash-screen (3.3.0):
     - React-Core
   - react-native-webview (13.13.5):
@@ -1918,6 +1920,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-orientation-locker (from `../node_modules/react-native-orientation-locker`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-spinkit (from `../node_modules/react-native-spinkit`)
   - react-native-splash-screen (from `../node_modules/react-native-splash-screen`)
   - react-native-webview (from `../node_modules/react-native-webview`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -2057,6 +2060,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-orientation-locker"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-spinkit:
+    :path: "../node_modules/react-native-spinkit"
   react-native-splash-screen:
     :path: "../node_modules/react-native-splash-screen"
   react-native-webview:
@@ -2193,6 +2198,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: fd98e3e44af51599576705ec7a85a36e35978913
   react-native-orientation-locker: cc6f357b289a2e0dd2210fea0c52cb8e0727fdaa
   react-native-safe-area-context: 33fadf89988c8813cfac57797a3bc53708863dd1
+  react-native-spinkit: 96a74c3519fab0eded2ab8c285f774aa3f4b7944
   react-native-splash-screen: 95994222cc95c236bd3cdc59fe45ed5f27969594
   react-native-webview: 005cf4cfde4e2688d222e1fe962d638bc2acc07d
   React-NativeModulesApple: 5c61cef9e7f0e1d6216ff0af41a3b882806a5cec

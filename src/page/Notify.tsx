@@ -1,5 +1,5 @@
 import * as React from "react"
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ImageBackground, ScrollView, Image, FlatList, Modal, TouchableWithoutFeedback, Pressable, Alert } from "react-native"
+import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity, TextInput, ImageBackground, ScrollView, Image, FlatList, Modal, TouchableWithoutFeedback, Pressable, Alert } from "react-native"
 import LinearGradient from "react-native-linear-gradient"
 import { createStackNavigator } from "@react-navigation/stack"
 import { IconSearch, IconFolder, IconMoreVert, IconChevronLeft, IconFilter, IconMain, IconChevronRight, IconCloud, IconWatch, IconSend, IconDelete, IconVerify, IconCode } from "../assets"
@@ -8,11 +8,15 @@ import GradientText from "../components/GradientText"
 import CustomRadio from "../components/CustomRadio"
 import ModalCustom from "../components/ModalCustom"
 import { useNotification } from "../components/NotificationProvider"
+import { useToast } from "../components/UseToast"
+import api from "../globall/globall"
+
+const toast = useToast()
 
 type RootStackParamList = {
     NotifyList: undefined
-    GroupDetail: { groupName: string; hasData: boolean }
-    ConnectionDetail: { title: string; count: number; lastUpdate: string; icon: string }
+    GroupDetail: { group: any }
+    ConnectionDetail: { title: string; detail_group: any; option_id: string }
 }
 
 // Tạo Context để quản lý trạng thái modal
@@ -23,22 +27,44 @@ const ModalContext = React.createContext<{
     setModalOptions: React.Dispatch<React.SetStateAction<boolean>>
     modal_add_group: boolean
     setModalAddGroup: React.Dispatch<React.SetStateAction<boolean>>
-    modal_connect: boolean
-    setModalConnect: React.Dispatch<React.SetStateAction<boolean>>
-    group_data: Array<{ name: string; data: boolean }>
-    setGroupData: React.Dispatch<React.SetStateAction<Array<{ name: string; data: boolean }>>>
+    group_data?: any[]
+    setGroupData?: React.Dispatch<React.SetStateAction<any[]>>
 }>({
     modal_filler: false,
     setModalFiller: () => {},
     modal_options: false,
     setModalOptions: () => {},
     modal_add_group: false,
-    setModalAddGroup: () => {},
-    modal_connect: false,
-    setModalConnect: () => {},
-    group_data: [],
-    setGroupData: () => {}
+    setModalAddGroup: () => {}
 })
+
+declare global {
+    var device_token: string | null
+}
+global.device_token = null
+
+const formatTimeAgo = (dateString: string) => {
+    try {
+        const now = new Date()
+        const past = new Date(dateString)
+        if (isNaN(past.getTime())) return "Không xác định"
+
+        const diffInMs = now.getTime() - past.getTime()
+        const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
+
+        if (diffInMinutes < 60) {
+            return `${diffInMinutes} phút trước`
+        } else if (diffInHours < 24) {
+            return `${diffInHours} giờ trước`
+        } else {
+            return `${diffInDays} ngày trước`
+        }
+    } catch (error) {
+        return "Không xác định"
+    }
+}
 
 const Stack = createStackNavigator<RootStackParamList>()
 
@@ -89,27 +115,39 @@ const DevicesModalOptions = ({ visible, onClose }: { visible: boolean; onClose: 
 }
 
 // Modal Tạo nhóm mới
-const DevicesModalAddGroup = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
+const DevicesModalAddGroup = ({ visible, onClose, onAddGroup }: { visible: boolean; onClose: () => void; onAddGroup: (group: { gr_name: string; config_id: null; platform_id: null; id: string }) => void }) => {
     const input_ref_add_group = React.useRef<TextInput>(null)
     const [group_name_focused, setGroupNameFocused] = React.useState(false)
     const [group_name, setGroupName] = React.useState("")
-    const { group_data, setGroupData } = React.useContext(ModalContext)
+    const [loading, setLoading] = React.useState(false)
 
     // Hàm thêm nhóm mới
-    const handleAddGroup = () => {
+    const handleAddGroup = async () => {
         if (group_name.trim() === "") {
-            // Hiển thị thông báo lỗi nếu tên nhóm trống
             Alert.alert("Nhập tên nhóm bạn muốn tạo")
             return
         }
+        setLoading(true)
+        const res = (await api({
+            url: `/gate/me/noti/groups`,
+            method: "POST",
+            data: {
+                group_name
+            }
+        })) as any
+        setLoading(false)
+        if (res.success) {
+            // Gọi callback để thêm nhóm mới
+            onAddGroup({ gr_name: group_name, config_id: null, platform_id: null, id: res.id })
 
-        // Thêm nhóm mới vào danh sách
-        const newGroup = { name: group_name, data: false }
-        setGroupData([...group_data, newGroup])
-
-        // Reset form và đóng modal
-        setGroupName("")
-        onClose()
+            // Reset form và đóng modal
+            setGroupName("")
+            onClose()
+            toast.showSuccess("Thêm nhóm thành công")
+        } else {
+            toast.showError(res.message || "Lỗi")
+            return
+        }
     }
 
     // Reset form khi modal đóng
@@ -141,7 +179,7 @@ const DevicesModalAddGroup = ({ visible, onClose }: { visible: boolean; onClose:
                 }}>
                 <TextInput ref={input_ref_add_group} style={styles.input} placeholder="Điền tên nhóm..." onFocus={() => setGroupNameFocused(true)} onBlur={() => setGroupNameFocused(false)} value={group_name} onChangeText={setGroupName} />
             </Pressable>
-            <TouchableOpacity activeOpacity={0.7} onPress={handleAddGroup}>
+            <TouchableOpacity activeOpacity={0.7} onPress={handleAddGroup} disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
                 <LinearGradient colors={["#00C7DE", "#1A8CFF", "#0071F2"]} locations={[0, 0.549, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.linearGradient, { height: 40 }]}>
                     <Text style={[styles.buttonText, { borderRadius: 10 }]}>Xác nhận</Text>
                 </LinearGradient>
@@ -151,9 +189,54 @@ const DevicesModalAddGroup = ({ visible, onClose }: { visible: boolean; onClose:
 }
 
 // Modal Điền mã liên kết
-const DevicesModalConnect = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
+const DevicesModalConnect = ({ visible, onClose, detail_group, onSuccess }: { visible: boolean; onClose: () => void; detail_group: any; onSuccess: () => void }) => {
     const input_ref = React.useRef<TextInput>(null)
     const [code_focused, setCodeFocused] = React.useState(false)
+    const [code, setCode] = React.useState("")
+    const { group_data, setGroupData } = React.useContext(ModalContext)
+
+    const handleConfirm = async () => {
+        const res = (await api({
+            url: `/gate/me/noti/connect`,
+            method: "POST",
+            data: {
+                group_id: detail_group.id,
+                code: code,
+                // device_token: global.device_token
+                device_token: "d8KZdfSfGUQKtxmsxNHVdt:APA91bHFK2J1tC3g3GSi0u_1H43T6IUHUVBx6GJYpIOPQ4he8iHD-A23L4krchYLzlXFy1gWFHb1jVVoePN5pX9NdnAdfzj9bVExy5DKZyuyLsod7JKdGVA"
+            }
+        })) as any
+        if (res.success) {
+            // Cập nhật trực tiếp vào detail_group
+            detail_group.config_id = res.config_id
+            detail_group.platform_id = res.platform_id
+
+            if (setGroupData && group_data) {
+                const updatedGroups = group_data.map(group => {
+                    // Kiểm tra nếu group có id trùng với detail_group.id
+                    if (group.id === detail_group.id) {
+                        // Cập nhật config_id và platform_id
+                        return {
+                            ...group,
+                            config_id: res.config_id,
+                            platform_id: res.platform_id
+                        }
+                    }
+                    return group
+                })
+
+                // Cập nhật state với mảng đã được cập nhật
+                setGroupData(updatedGroups)
+            }
+
+            onSuccess()
+            onClose()
+            setCode("")
+            toast.showSuccess("Liên kết thành công")
+        } else {
+            toast.showError(res.message || "Lỗi")
+        }
+    }
 
     return (
         <ModalCustom visible={visible} onClose={onClose} height={200} useKeyboardAvoidingView={true}>
@@ -167,9 +250,9 @@ const DevicesModalConnect = ({ visible, onClose }: { visible: boolean; onClose: 
                     input_ref.current?.focus()
                     setCodeFocused(true)
                 }}>
-                <TextInput ref={input_ref} style={styles.input} placeholder="Điền mã tại đây..." onFocus={() => setCodeFocused(true)} onBlur={() => setCodeFocused(false)} />
+                <TextInput ref={input_ref} style={styles.input} placeholder="Điền mã tại đây..." onFocus={() => setCodeFocused(true)} onBlur={() => setCodeFocused(false)} value={code} onChangeText={setCode} />
             </Pressable>
-            <TouchableOpacity activeOpacity={0.7}>
+            <TouchableOpacity activeOpacity={0.7} onPress={handleConfirm}>
                 <LinearGradient colors={["#00C7DE", "#1A8CFF", "#0071F2"]} locations={[0, 0.549, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.linearGradient, { height: 40 }]}>
                     <Text style={[styles.buttonText, { borderRadius: 10 }]}>Xác nhận</Text>
                 </LinearGradient>
@@ -178,75 +261,48 @@ const DevicesModalConnect = ({ visible, onClose }: { visible: boolean; onClose: 
     )
 }
 
-// Component cho màn hình chi tiết kết nối
+// Component cho màn hình danh sách thông báo
 const ConnectionDetailScreen = ({ route }: { route: any }) => {
+    interface type_flatlist {
+        id: number
+        is_read: boolean | null
+        message: string
+        created_at: string
+    }
     const navigation = useNavigation()
-    const { title, count, lastUpdate, icon } = route.params || {}
+    const { title, detail_group, option_id } = route.params || {}
     const { modal_filler, setModalFiller } = React.useContext(ModalContext)
     const { modal_options, setModalOptions } = React.useContext(ModalContext)
     const [search_focused, setSearchFocused] = React.useState(false)
     const search_name_id = React.useRef<TextInput>(null)
-
-    const [notification_data] = React.useState([
-        {
-            id: "1",
-            message: "Tk Facebook Anna Zahna - 123456789 đã bị mất kết nối nâng cao",
-            time: "16:30"
-        },
-        {
-            id: "2",
-            message: "Tk Facebook Anna Zahna - 123456789 đã bị mất kết nối nâng cao",
-            time: "16:30"
-        },
-        {
-            id: "3",
-            message: "Tk Facebook John Doe - 987654321 đã bị mất kết nối nâng cao",
-            time: "15:45"
-        },
-        {
-            id: "4",
-            message: "Tk Facebook Sarah Smith - 456789123 đã bị mất kết nối nâng cao",
-            time: "14:20"
-        },
-        {
-            id: "5",
-            message: "Tk Facebook Michael Brown - 789123456 đã bị mất kết nối nâng cao",
-            time: "13:10"
-        },
-        {
-            id: "6",
-            message: "Tk Facebook Emily Davis - 321654987 đã bị mất kết nối nâng cao",
-            time: "12:05"
-        },
-        {
-            id: "7",
-            message: "Tk Facebook David Wilson - 654987321 đã bị mất kết nối nâng cao",
-            time: "11:30"
-        },
-        {
-            id: "8",
-            message: "Tk Facebook Lisa Taylor - 159753468 đã bị mất kết nối nâng cao",
-            time: "10:15"
-        },
-        {
-            id: "9",
-            message: "Tk Facebook Lisa Taylor - 159753468 đã bị mất kết nối nâng cao",
-            time: "10:15"
-        },
-        {
-            id: "10",
-            message: "Tk Facebook Lisa Taylor - 159753468 đã bị mất kết nối nâng cao",
-            time: "10:15"
-        },
-        {
-            id: "11",
-            message: "Tk Facebook Lisa Taylor - 159753468 đã bị mất kết nối nâng cao",
-            time: "10:15"
-        }
-    ])
-
-    // Thêm state tìm kiếm - khởi tạo với dữ liệu gốc
     const [search_text, setSearchText] = React.useState("")
+    const [new_notifications, setNewNotifications] = React.useState(0)
+    const [notification_data, setNotificationData] = React.useState<type_flatlist[]>([])
+
+    const listNotification = async () => {
+        const res = (await api({
+            url: `/gate/me/noti/list`,
+            method: "GET",
+            params: {
+                platform_id: detail_group.platform_id,
+                option_id: option_id,
+                page: 1,
+                limit: 50
+            }
+        })) as any
+        if (res.success) {
+            console.log(res)
+
+            setNotificationData(res.data)
+            setNewNotifications(res.count_unread)
+        } else {
+            toast.showError(res.message || "Lỗi")
+        }
+    }
+
+    React.useEffect(() => {
+        listNotification()
+    }, [])
 
     // Tính toán danh sách đã lọc trực tiếp từ searchText và notificationData
     const filtered_notifications = React.useMemo(() => {
@@ -261,7 +317,7 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
             const message_matches = item.message.toLowerCase().includes(search_lower)
 
             // Tìm trong ID - đảm bảo chuyển thành string
-            const id_string = String(item.id) // Chắc chắn chuyển đổi thành string
+            const id_string = String(item.id)
             const id_matches = id_string.includes(search_lower)
 
             return message_matches || id_matches
@@ -273,6 +329,10 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
         setSearchText(text)
     }
 
+    const stripHtmlTags = (html: string) => {
+        return html.replace(/<\/?[^>]+(>|$)/g, "")
+    }
+
     // Hàm render item cho FlatList
     const renderItem = ({ item, index }: { item: any; index: number }) => (
         <View style={styles.item_flastlist_container}>
@@ -281,8 +341,8 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
                     <View style={styles.notificationDot}></View>
                 </View>
                 <View style={styles.notificationContent}>
-                    <Text style={styles.notificationMessage}>{item.message}</Text>
-                    <Text style={styles.notificationTime}>{item.time}</Text>
+                    <Text style={styles.notificationMessage}>{stripHtmlTags(item.message)}</Text>
+                    <Text style={styles.notificationTime}>{formatTimeAgo(item.created_at)}</Text>
                 </View>
             </View>
             {index < filtered_notifications.length - 1 && <View style={styles.dashedBorder} />}
@@ -336,7 +396,7 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 16 }}>
                 <Text style={{ fontSize: 14, fontWeight: "600" }}>Tổng cộng {filtered_notifications.length}</Text>
                 <Text style={{ width: 5.5, height: 5.5, borderRadius: 50, backgroundColor: "#A0AEC0" }}></Text>
-                <GradientText text="230 mới" style={{ fontSize: 14, fontWeight: "600", marginTop: 2 }} colors={["#00C7DE", "#1A8CFF", "#0071F2"]} locations={[0, 0.549, 1]} start={{ x: 0, y: 0 }} end={{ x: 0.5, y: 1 }} />
+                <GradientText text={`${new_notifications} mới`} style={{ fontSize: 14, fontWeight: "600", marginTop: 2 }} colors={["#00C7DE", "#1A8CFF", "#0071F2"]} locations={[0, 0.549, 1]} start={{ x: 0, y: 0 }} end={{ x: 0.5, y: 1 }} />
             </View>
 
             <FlatList
@@ -349,7 +409,7 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
                         <Text style={{ fontSize: 16, color: "#718096" }}>Không tìm thấy thông báo phù hợp</Text>
                     </View>
                 )}
-                keyExtractor={item => item.id}
+                keyExtractor={item => item.id.toString()}
             />
         </ImageBackground>
     )
@@ -357,55 +417,88 @@ const ConnectionDetailScreen = ({ route }: { route: any }) => {
 
 // Component cho màn hình chi tiết nhóm
 const GroupDetailScreen = ({ route }: { route: any }) => {
+    interface NotificationItem {
+        option_id: string
+        type: {
+            key: string
+            name: {
+                vi: string
+                en: string
+            }
+        }
+        count: string
+        last_time: string
+        noti: boolean
+    }
     const navigation = useNavigation<NavigationProp<RootStackParamList>>()
-    const group_name = route.params?.groupName || "No group name provided"
-    const has_data = route.params?.hasData || false
+    const [detail_group, setDetailGroup] = React.useState(route.params?.group || {})
+    const [modal_connect, setModalConnect] = React.useState(false)
+    const [search_text, setSearchText] = React.useState("")
     const { modal_filler, setModalFiller } = React.useContext(ModalContext)
-    const { modal_connect, setModalConnect } = React.useContext(ModalContext)
     const [search_focused, setSearchFocused] = React.useState(false)
     const search_name_id = React.useRef<TextInput>(null)
 
     // Dữ liệu kết nối
-    const connect_data = [
-        {
-            id: 1,
-            title: "Mất kết nối nâng cao",
-            count: 12909,
-            lastUpdate: "Gần nhất: 3 phút trước",
-            icon: "IconMain",
-            backgroundColor: "rgba(102, 182, 255, 0.13)"
-        },
-        {
-            id: 2,
-            title: "Mất kết nối cơ bản",
-            count: 0,
-            lastUpdate: "Gần nhất: 3 phút trước",
-            icon: "IconCloud",
-            backgroundColor: "rgba(92, 243, 79, 0.13)"
-        },
-        {
-            id: 3,
-            title: "Trạng thái TKQC",
-            count: 12,
-            lastUpdate: "Gần nhất: 3 phút trước",
-            icon: "IconWatch",
-            backgroundColor: "rgba(243, 210, 79, 0.13)"
-        }
-    ]
+    const [connect_data, setConnectData] = React.useState<NotificationItem[]>([])
 
-    // Hàm render icon dựa trên tên
-    const renderIcon = (iconName: string) => {
-        switch (iconName) {
-            case "IconMain":
+    React.useEffect(() => {
+        // Chỉ gọi API khi detail_group có config_id
+        if (detail_group.config_id) {
+            detailGroup()
+        }
+    }, [detail_group.id])
+
+    const getIconByType = (typeKey: string) => {
+        switch (typeKey) {
+            case "via-basic-connect-error":
                 return <IconMain width={32} height={32} />
-            case "IconCloud":
+            case "stt-adaccount":
                 return <IconCloud width={32} height={32} />
-            case "IconWatch":
-                return <IconWatch width={32} height={32} />
             default:
-                return null
+                return <IconWatch width={32} height={32} />
         }
     }
+
+    const detailGroup = async () => {
+        const res = await api({
+            url: `/gate/me/noti/group/detail`,
+            method: "GET",
+            params: {
+                group_id: detail_group.id
+            }
+        })
+        if (res.success) {
+            setConnectData(res.data)
+            setModalConnect(false)
+        } else {
+            toast.showError(res.message || "Lỗi")
+        }
+    }
+
+    const getBackgroundColor = (typeKey: string) => {
+        switch (typeKey) {
+            case "via-basic-connect-error":
+                return "rgba(102, 182, 255, 0.13)" // Màu cho IconMain
+            case "stt-adaccount":
+                return "rgba(92, 243, 79, 0.13)" // Màu cho IconCloud
+            default:
+                return "rgba(243, 210, 79, 0.13)" // Màu cho IconWatch
+        }
+    }
+
+    const filtered_connect_data = React.useMemo(() => {
+        if (!search_text.trim()) {
+            return connect_data
+        }
+
+        const search_lower = search_text.toLowerCase()
+
+        return connect_data.filter(item => {
+            // Tìm kiếm trong type?.name?.vi
+            const name_vi = item.type?.name?.vi || ""
+            return name_vi.toLowerCase().includes(search_lower)
+        })
+    }, [connect_data, search_text])
 
     return (
         <ImageBackground source={require("../assets/bgr2.png")} style={styles.container}>
@@ -413,10 +506,10 @@ const GroupDetailScreen = ({ route }: { route: any }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <IconChevronLeft width={26} height={26} />
                 </TouchableOpacity>
-                <Text style={{ fontSize: 20, fontWeight: "600", marginLeft: 5 }}>{has_data ? group_name : "Nhóm"}</Text>
+                <Text style={{ fontSize: 20, fontWeight: "600", marginLeft: 5 }}>{detail_group.gr_name}</Text>
             </View>
 
-            {has_data ? (
+            {detail_group.config_id ? (
                 <>
                     <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
                         <TouchableOpacity
@@ -426,7 +519,7 @@ const GroupDetailScreen = ({ route }: { route: any }) => {
                                 setSearchFocused(true)
                             }}>
                             <IconSearch width={20} height={20} focused={search_focused} />
-                            <TextInput ref={search_name_id} style={styles.input} placeholder="Tìm kiếm thông báo.." onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} />
+                            <TextInput ref={search_name_id} style={styles.input} placeholder="Tìm kiếm thông báo.." onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} onChangeText={setSearchText} />
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => {
@@ -441,29 +534,28 @@ const GroupDetailScreen = ({ route }: { route: any }) => {
                     <Text style={{ fontSize: 20, fontWeight: "600", marginTop: 25 }}>Kết nối & đồng bộ tài sản</Text>
 
                     <ScrollView style={{ marginTop: 15, marginBottom: 10, marginRight: -10, paddingRight: 10, paddingTop: 5 }}>
-                        {connect_data.map((item, index) => (
+                        {filtered_connect_data.map((item, index) => (
                             <TouchableOpacity
-                                key={item.id}
+                                key={index}
                                 style={[styles.item_connect, index < connect_data.length - 1 && { marginBottom: 10 }]}
                                 onPress={() =>
                                     navigation.navigate("ConnectionDetail", {
-                                        title: item.title,
-                                        count: item.count,
-                                        lastUpdate: item.lastUpdate,
-                                        icon: item.icon
+                                        title: item.type?.name?.vi || "Không có tiêu đề",
+                                        detail_group: detail_group,
+                                        option_id: item.option_id
                                     })
                                 }>
-                                <View style={{ alignItems: "center", justifyContent: "center", backgroundColor: item.backgroundColor, borderRadius: 12, height: 64, width: 64 }}>{renderIcon(item.icon)}</View>
+                                <View style={{ alignItems: "center", justifyContent: "center", backgroundColor: getBackgroundColor(item.type?.key || ""), borderRadius: 12, height: 64, width: 64 }}>{getIconByType(item.type?.key || "")}</View>
                                 <View style={{ flexDirection: "row", justifyContent: "space-between", flex: 1 }}>
                                     <View>
-                                        <Text style={{ fontSize: 15, fontWeight: "500", lineHeight: 20, color: "#718096" }}> {item.title}</Text>
-                                        <Text style={{ marginTop: 2, fontSize: 18, fontWeight: "700", lineHeight: 20 }}> {item.count.toLocaleString()}</Text>
-                                        <Text style={{ marginTop: 7, lineHeight: 20, fontSize: 13, fontWeight: "500", color: "#66ADFF" }}> {item.lastUpdate}</Text>
+                                        <Text style={{ fontSize: 15, fontWeight: "500", lineHeight: 20, color: "#718096" }}> {item.type?.name?.vi || "Không có tiêu đề"}</Text>
+                                        <Text style={{ marginTop: 2, fontSize: 18, fontWeight: "700", lineHeight: 20 }}> {parseInt(item.count || "0").toLocaleString()}</Text>
+                                        <Text style={{ marginTop: 7, lineHeight: 20, fontSize: 13, fontWeight: "500", color: "#66ADFF" }}> Gần nhất: {formatTimeAgo(item.last_time || "")}</Text>
                                     </View>
                                     <IconChevronRight width={20} height={20} />
                                 </View>
 
-                                <View style={styles.cycle}></View>
+                                {item.noti && <View style={styles.cycle}></View>}
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -489,6 +581,8 @@ const GroupDetailScreen = ({ route }: { route: any }) => {
                     </View>
                 </View>
             )}
+
+            <DevicesModalConnect visible={modal_connect} onClose={() => setModalConnect(false)} detail_group={detail_group} onSuccess={detailGroup} />
         </ImageBackground>
     )
 }
@@ -497,34 +591,50 @@ const GroupDetailScreen = ({ route }: { route: any }) => {
 const NotifyListScreen = () => {
     const navigation = useNavigation<NavigationProp<RootStackParamList>>()
     const username_input_ref = React.useRef<TextInput>(null)
+
     const { modal_add_group, setModalAddGroup, group_data, setGroupData } = React.useContext(ModalContext)
     const [search_focused, setSearchFocused] = React.useState(false)
     const [search_text, setSearchText] = React.useState("")
-    const [filtered_group_data, setFilteredGroupData] = React.useState(group_data)
-    const { resetBadge } = useNotification() // Sử dụng hook trực tiếp
+    const [filtered_group_data, setFilteredGroupData] = React.useState<any[]>([])
+    const { resetBadge } = useNotification()
 
     // Cập nhật filteredGroupData khi groupData thay đổi
     React.useEffect(() => {
+        if (!group_data) return
+
         if (search_text.trim() === "") {
-            setFilteredGroupData(group_data)
+            setFilteredGroupData(group_data) // group_data có thể là undefined
         } else {
-            const filtered = group_data.filter(group => group.name.toLowerCase().includes(search_text.toLowerCase()))
-            setFilteredGroupData(filtered)
+            const filtered = group_data?.filter(group => group.gr_name.toLowerCase().includes(search_text.toLowerCase()))
+            setFilteredGroupData(filtered) // filtered có thể là undefined
         }
     }, [group_data, search_text])
 
+    const handleAddGroup = (newGroup: { gr_name: string; config_id: null; platform_id: null; id: string }) => {
+        if (setGroupData && group_data) {
+            setGroupData([newGroup, ...group_data])
+        }
+    }
+
     const handleSearch = (text: string) => {
         setSearchText(text)
+        if (!group_data) return // Kiểm tra group_data tồn tại
+
         if (text.trim() === "") {
             setFilteredGroupData(group_data)
         } else {
-            const filtered = group_data.filter(group => group.name.toLowerCase().includes(text.toLowerCase()))
+            const filtered = group_data.filter(group => group.gr_name.toLowerCase().includes(text.toLowerCase()))
             setFilteredGroupData(filtered)
         }
     }
-    // Hàm xử lý khi nhấn nút tắt thông báo
+
     const handleResetBadge = async () => {
-        await resetBadge()
+        toast.showCustommm("Đây là custom toast màu hồng!", {
+            title: "Custom Pink Toast",
+            duration: 4000
+        })
+        return
+        // await resetBadge()
     }
 
     return (
@@ -563,10 +673,10 @@ const NotifyListScreen = () => {
             <ScrollView style={{ marginTop: 23, marginBottom: 10 }}>
                 {filtered_group_data.length > 0 ? (
                     filtered_group_data.map((group, index) => (
-                        <TouchableOpacity key={index} style={[styles.item_folder, index < filtered_group_data.length - 1 && { marginBottom: 15 }]} onPress={() => navigation.navigate("GroupDetail", { groupName: group.name, hasData: group.data })}>
+                        <TouchableOpacity key={index} style={[styles.item_folder, index < filtered_group_data.length - 1 && { marginBottom: 15 }]} onPress={() => navigation.navigate("GroupDetail", { group })}>
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 15 }}>
                                 <IconFolder width={24} height={24} />
-                                <Text style={{ fontSize: 15, fontWeight: "700" }}>{group.name}</Text>
+                                <Text style={{ fontSize: 15, fontWeight: "700" }}>{group.gr_name}</Text>
                             </View>
                             <IconMoreVert width={24} height={24} />
                         </TouchableOpacity>
@@ -577,6 +687,7 @@ const NotifyListScreen = () => {
                     </View>
                 )}
             </ScrollView>
+            <DevicesModalAddGroup visible={modal_add_group} onClose={() => setModalAddGroup(false)} onAddGroup={handleAddGroup} />
         </ImageBackground>
     )
 }
@@ -587,14 +698,27 @@ function NotifyScreen() {
     const [modal_filler, setModalFiller] = React.useState(false)
     const [modal_options, setModalOptions] = React.useState(false)
     const [modal_add_group, setModalAddGroup] = React.useState(false)
-    const [modal_connect, setModalConnect] = React.useState(false)
+    const [group_data, setGroupData] = React.useState<any[]>([])
 
-    // Thêm state groupData
-    const [group_data, setGroupData] = React.useState([
-        { name: "Nhóm nhận thông báo A", data: true },
-        { name: "Nhóm nhận thông báo B", data: false },
-        { name: "Nhóm nhận thông báo C", data: true }
-    ])
+    React.useEffect(() => {
+        const getGroup = async () => {
+            const res = await api({
+                url: `/gate/me/noti/groups`,
+                method: "GET",
+                params: {
+                    search: null
+                }
+            })
+            if (res.error) {
+                toast.showError(res.message || "Lỗi")
+                return
+            }
+
+            setGroupData(res.data)
+        }
+
+        getGroup()
+    }, [])
 
     return (
         <ModalContext.Provider
@@ -605,8 +729,6 @@ function NotifyScreen() {
                 setModalOptions,
                 modal_add_group,
                 setModalAddGroup,
-                modal_connect,
-                setModalConnect,
                 group_data,
                 setGroupData
             }}>
@@ -618,8 +740,6 @@ function NotifyScreen() {
             {/* Modal được render ở đây để có thể hiển thị trên tất cả các màn hình */}
             <DevicesModaFiller visible={modal_filler} onClose={() => setModalFiller(false)} />
             <DevicesModalOptions visible={modal_options} onClose={() => setModalOptions(false)} />
-            <DevicesModalAddGroup visible={modal_add_group} onClose={() => setModalAddGroup(false)} />
-            <DevicesModalConnect visible={modal_connect} onClose={() => setModalConnect(false)} />
         </ModalContext.Provider>
     )
 }

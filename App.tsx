@@ -5,6 +5,8 @@ import { AppNavigation } from "./src/navigation/AppNavigation"
 import { Provider as PaperProvider } from "react-native-paper"
 import SplashScreen from "react-native-splash-screen"
 import NotificationProvider from "./src/components/NotificationProvider"
+import Toast from "react-native-toast-message"
+import { toastConfig } from "./src/config/ToastConfig" // Import component
 
 function App(): React.JSX.Element {
     React.useEffect(() => {
@@ -21,6 +23,7 @@ function App(): React.JSX.Element {
             }}
             onTokenReceived={token => {
                 console.log("Token mới:", token)
+                global.device_token = token || null
                 // Gửi token lên server của bạn
             }}>
             <PaperProvider>
@@ -28,6 +31,7 @@ function App(): React.JSX.Element {
                     <AppNavigation />
                 </View>
             </PaperProvider>
+            <Toast config={toastConfig} />
         </NotificationProvider>
     )
 }

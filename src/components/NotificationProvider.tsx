@@ -128,6 +128,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         requestPermissions()
         // Xử lý thông báo khi app đang mở
         const messageListener = onMessage(messaging, async remoteMessage => {
+            console.log("remoteMessage", remoteMessage)
             const title = remoteMessage.notification?.title || "Thông báo mới"
             const body = remoteMessage.notification?.body || ""
 

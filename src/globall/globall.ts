@@ -3,6 +3,7 @@ import axios, { AxiosRequestConfig } from 'axios';
 interface ApiResponse<T = any> {
   data?: T;
   error?: boolean;
+  success?: boolean;
   message?: string;
   subcode?: string;
 }
